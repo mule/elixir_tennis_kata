@@ -2,12 +2,42 @@ defmodule TennisKata do
 
 end
 
+
+defmodule Game do
+    @scores [:love, :fifteen, :thirty, :forty]
+    @endgame_scores[:deuce, :advantage_p1, :advantage_p2]
+    @win_states [:game_p1, :game_p2]
+    defstruct [score: {:love, :love}]
+
+    def get_next_state(ball_winner, current_game = %Game{}) when
+    ball_winner in TennisMatch.players and current_game.score in @endgame_scores
+    do
+        params = {ball_winner, current_game.scre}
+        case current_game.score  do
+
+
+        end
+    end
+end
+
+defmodule TennisSet do
+    @win_states [:set_p1, :set_p2]
+    @status_states [:normal, :tiebreak]
+    defstruct [set_status: :normal, score: {0,0}, tiebreak_score: :nil]
+
+    def get_next_state(point_state, current_set = %TennisSet{}) do
+
+
+    end
+
+end
+
 defmodule TennisMatch do
     @point_scores  [:love, :fifteen, :thirty, :forty]
     @point_endgame_states  [:deuce, :p1_advantage, :p2_advantage]
     @players [:p1, :p2]
     @match_states [:normal, :tiebreak, :match_p1, :match_p2]
-    defstruct [match_type: :nil, point: {:love, :love}, match_state: :normal, points: {0,0}, sets: [{0,0}], tiebreak: :nil]
+    defstruct [match_type: :nil, point: {:love, :love}, match_state: :normal, points: {0,0}, sets: [{0,0}], current_set: 1, tiebreak: :nil]
 
     def start_match(match_type) when match_type == :best_of_three_sets or match_type == :best_of_five_sets do
         %TennisMatch{match_type: match_type }
@@ -73,7 +103,22 @@ defmodule TennisMatch do
         set_state = next_points_state(point_state, tennis_match.points)
     end
 
-    
+    def  update_match_state(set_state, tennis_match = %TennisMatch{}) when
+    is_tuple(set_state)
+    and tuple_size(set_state) == 2 do
+        if set_state == {6,6} do
+            tennis_match.match_state = :tiebreak
+        end
+    end
+
+    def update_match_state(:set_p1, tennis_match = %TennisMatch{}) do
+
+
+
+    end
+
+
+
 
     def next_points_state(point_state, points) when
     point_state == :game_p1
@@ -88,8 +133,7 @@ defmodule TennisMatch do
         case point_state do
             :game_p1 -> {p1_score +1, p2_score}
             :game_p2 -> {p1_score, p2_score + 1}
+            _        -> point_state
         end
     end
-
-
 end
