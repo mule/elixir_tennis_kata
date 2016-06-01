@@ -27,8 +27,9 @@ defmodule TennisKataTest do
         actual = TennisMatch.next_point_score(:p1, {:love, :love })
         assert actual == {:fifteen, :love}
         actual = TennisMatch.next_point_score(:p2, {:love, :love })
+        IO.inspect actual
+        
         assert actual == {:love, :fifteen}
-        IO.IO.inspect actual
         actual = TennisMatch.next_point_score(:p1, {:thirty, :forty })
         assert actual == :deuce
         actual = TennisMatch.next_point_score(:p2, {:forty, :thirty })
