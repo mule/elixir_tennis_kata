@@ -4,40 +4,101 @@ end
 
 
 defmodule Game do
-    @scores [:love, :fifteen, :thirty, :forty]
-    @endgame_scores[:deuce, :advantage_p1, :advantage_p2]
-    @win_states [:game_p1, :game_p2]
     defstruct [score: {:love, :love}]
+    @scores [:love, :fifteen, :thirty, :forty]
+    @endgame_scores [:deuce, :advantage_p1, :advantage_p2]
+    @win_states [:game_p1, :game_p2]
 
-    def get_next_state(ball_winner, current_game = %Game{}) when
-    ball_winner in TennisMatch.players and current_game.score in @endgame_scores
+
+    def get_next_state(ball_winner, current_game = %Game{})
+    when ball_winner in [:p1, :p2]
     do
-        params = {ball_winner, current_game.scre}
-        case current_game.score  do
+        new_score = next_game_state(ball_winner, current_game.score)
+        %{current_game | score: new_score}
+    end
 
+    defp next_game_state(ball_winner, current_score) when
+    ball_winner in [:p1, :p2]
+    and current_score in @endgame_scores
+    do
+        params = {ball_winner, current_score}
+            case params  do
+            {:p1, :advantage_p1} -> :game_p1
+            {:p2, :advantage_p2} -> :game_p2
+            {:p1, :advantage_p2} -> :deuce
+            {:p2, :advantage_p1} -> :deuce
+            {:p1, :deuce} -> :advantage_p1
+            {:p2, :deuce} -> :advantage_p2
+        end
+    end
 
+    defp next_game_state(ball_winner, current_score) when
+    is_tuple(current_score)
+    and tuple_size(current_score) == 2
+    and elem(current_score, 0) in @scores
+    and elem(current_score, 1) in @scores
+    and current_score != {:forty, :forty}
+    do
+        {p1_score, p2_score} = current_score
+        params = {ball_winner, current_score}
+
+        case params do
+            {:p1, {:love, _ }} -> {:fifteen, p2_score}
+            {:p2, {_ , :love}} -> {p1_score, :fifteen}
+            {:p1, {:fifteen, _ }} -> {:thirty, p2_score}
+            {:p2, {_, :fifteen}} -> {p1_score, :thirty}
+            {:p1, {:thirty, :fifteen }} -> {:forty, :fifteen}
+            {:p1, {:thirty, :thirty }} -> {:forty, :thirty}
+            {:p1, {:thirty, :forty}} -> :deuce
+            {:p2, { :fifteen , :thirty}} -> {:fifteen, :forty}
+            {:p2, { :thirty , :thirty}} -> {:thirty, :forty}
+            {:p2, {:forty, :thirty}} -> :deuce
+            {:p1, {:forty, _ }} -> :game_p1
+            {:p2, {_, :forty}} -> :game_p2
         end
     end
 end
 
-defmodule TennisSet do
-    @win_states [:set_p1, :set_p2]
-    @status_states [:normal, :tiebreak]
-    defstruct [set_status: :normal, score: {0,0}, tiebreak_score: :nil]
 
-    def get_next_state(point_state, current_set = %TennisSet{}) do
+defmodule TennisSet do
+
+    @status_states [:normal, :tiebreak]
+    defstruct [status: :normal, score: {0,0}, tiebreak_score: :nil]
+
+    def get_next_state(game_winner, %TennisSet{status: :normal} = current_set) when
+    game_winner in [:game_p1, :game_p2]
+    do
+
+        new_score = get_next_score(game_winner, current_set.score)
+
+        if new_score == {6,6}, do: 
 
 
     end
 
+    defp get_next_score(game_winner, {p1_score, p2_score} = score) when
+    p1_score < 7
+    and p1_score >= 0
+    and p2_score < 7
+    and p2_score >= 0
+    and game_winner in [:game_p1, :game_p2]
+    do
+        case game_winner do
+            :game_p1 -> {p1_score + 1, p2_score}
+            :game_p2 -> {p1_score. p2_score + 1}
+        end
+    end
 end
 
 defmodule TennisMatch do
     @point_scores  [:love, :fifteen, :thirty, :forty]
     @point_endgame_states  [:deuce, :p1_advantage, :p2_advantage]
     @players [:p1, :p2]
+
     @match_states [:normal, :tiebreak, :match_p1, :match_p2]
     defstruct [match_type: :nil, point: {:love, :love}, match_state: :normal, points: {0,0}, sets: [{0,0}], current_set: 1, tiebreak: :nil]
+
+    def players, do: @players
 
     def start_match(match_type) when match_type == :best_of_three_sets or match_type == :best_of_five_sets do
         %TennisMatch{match_type: match_type }
@@ -95,19 +156,18 @@ defmodule TennisMatch do
         end
     end
 
-    def next_match_state(ball_winner, tennis_match = %TennisMatch{} ) when
-     ball_winner in @players
-     and tennis_match.match_state == :normal do
+    def next_match_state(ball_winner,  %TennisMatch{match_state: :normal} = tennis_match )
+    when ball_winner in @players do
 
         point_state = next_point_score(ball_winner, tennis_match.point)
-        set_state = next_points_state(point_state, tennis_match.points)
+
     end
 
     def  update_match_state(set_state, tennis_match = %TennisMatch{}) when
     is_tuple(set_state)
     and tuple_size(set_state) == 2 do
         if set_state == {6,6} do
-            tennis_match.match_state = :tiebreak
+            %{tennis_match | match_state: :tiebreak}
         end
     end
 
@@ -115,25 +175,5 @@ defmodule TennisMatch do
 
 
 
-    end
-
-
-
-
-    def next_points_state(point_state, points) when
-    point_state == :game_p1
-    or point_state == :game_p2
-    and is_tuple(points)
-    and tuple_size(points) == 2
-    and elem(points,0) <= 6
-    and elem(points,1) <= 6
-    and points != {6,6} do
-        {p1_score, p2_score} = points
-
-        case point_state do
-            :game_p1 -> {p1_score +1, p2_score}
-            :game_p2 -> {p1_score, p2_score + 1}
-            _        -> point_state
-        end
     end
 end
