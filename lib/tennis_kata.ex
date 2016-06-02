@@ -1,7 +1,5 @@
 defmodule TennisKata do
-
 end
-
 
 defmodule Game do
     defstruct [score: {:love, :love}]
@@ -9,18 +7,23 @@ defmodule Game do
     @endgame_scores [:deuce, :advantage_p1, :advantage_p2]
     @win_states [:game_p1, :game_p2]
 
+    def win_states, do: @win_states
 
     def get_next_state(ball_winner, current_game = %Game{})
-    when ball_winner in [:p1, :p2]
     do
+        unless ball_winner in TennisMatch.players do
+            raise ArgumentError, message: "ball_winner #{ball_winner} not allowed"
+        end
         new_score = next_game_state(ball_winner, current_game.score)
         %{current_game | score: new_score}
     end
 
-    defp next_game_state(ball_winner, current_score) when
-    ball_winner in [:p1, :p2]
-    and current_score in @endgame_scores
+    defp next_game_state(ball_winner, current_score) when current_score in @endgame_scores
     do
+        unless ball_winner in TennisMatch.players do
+            raise ArgumentError, message: "ball_winner #{ball_winner} not allowed"
+        end
+
         params = {ball_winner, current_score}
             case params  do
             {:p1, :advantage_p1} -> :game_p1
@@ -61,32 +64,40 @@ end
 
 
 defmodule TennisSet do
-
-    @status_states [:normal, :tiebreak]
+    @status_states [:normal, :tiebreak, :set_p1, :set_p2 ]
     defstruct [status: :normal, score: {0,0}, tiebreak_score: :nil]
 
-    def get_next_state(game_winner, %TennisSet{status: :normal} = current_set) when
-    game_winner in [:game_p1, :game_p2]
+    def get_next_state(game_winner, %TennisSet{status: :normal} = current_set)
     do
+        unless game_winner in Game.win_states do
+            raise ArgumentError, message: "game_winner #{game_winner} not allowed"
+        end
+
 
         new_score = get_next_score(game_winner, current_set.score)
 
-        if new_score == {6,6}, do: 
-
-
+        case new_score do
+            {6,6} -> %{current_set | status: :tiebreak, score: new_score, tiebreak_score: {0,0}}
+            :set_p1 -> %{current_set | status: new_score}
+            :set_p2 -> %{current_set | status: new_score}
+            _ -> %{current_set | score: new_score}
+        end
     end
 
     defp get_next_score(game_winner, {p1_score, p2_score} = score) when
-    p1_score < 7
+    p1_score <= 6
     and p1_score >= 0
-    and p2_score < 7
+    and p2_score <= 6
     and p2_score >= 0
     and game_winner in [:game_p1, :game_p2]
     do
-        case game_winner do
-            :game_p1 -> {p1_score + 1, p2_score}
-            :game_p2 -> {p1_score. p2_score + 1}
+        cond do
+            game_winner == :game_p1 and p1_score == 6 and p2_score < 6 -> :set_p1
+            game_winner == :game_p2 and p2_score == 6 and p1_score < 6 -> :set_p2
+            game_winner == :game_p1 and p1_score < 6 and p2_score < 6 -> {p1_score + 1, p2_score}
+            game_winner == :game_p2 and p1_score < 6 and p2_score < 6 -> {p1_score. p2_score + 1}
         end
+
     end
 end
 
