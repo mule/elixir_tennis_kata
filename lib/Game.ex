@@ -1,5 +1,4 @@
 defmodule TennisKata.Game do
-    require TennisKata.Match
     defstruct [score: {:love, :love}]
     @scores [:love, :fifteen, :thirty, :forty]
     @endgame_scores [:deuce, :advantage_p1, :advantage_p2]
@@ -10,7 +9,7 @@ defmodule TennisKata.Game do
     defmacro scores, do: unquote(@scores)
 
     def get_next_state(ball_winner, current_game = %TennisKata.Game{})
-    when ball_winner in TennisKata.Match.players
+    when ball_winner in [:p1, :p2]
     do
         new_score = next_game_state(ball_winner, current_game.score)
         %{current_game | score: new_score}
@@ -18,7 +17,7 @@ defmodule TennisKata.Game do
 
     defp next_game_state(ball_winner, current_score) when
     current_score in @endgame_scores
-    and ball_winner in TennisKata.Match.players
+    and ball_winner in [:p1, :p2]
     do
 
         params = {ball_winner, current_score}
@@ -36,7 +35,7 @@ defmodule TennisKata.Game do
     p1_score in @scores
     and p2_score in @scores
     and current_score != {:forty, :forty}
-    and ball_winner in TennisKata.Match.players
+    and ball_winner in [:p1, :p2]
     do
         params = {ball_winner, current_score}
         case params do
